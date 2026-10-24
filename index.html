@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriChef AI - 맞춤형 영양 레시피 & 코칭</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f4f7f4',
+                            100: '#e3eae3',
+                            200: '#c5d5c5',
+                            500: '#4a7c59',
+                            600: '#3b6447',
+                            700: '#2f5038',
+                        },
+                        warm: {
+                            50: '#fdfbf7',
+                            100: '#f7f2e8',
+                            200: '#eee3cf',
+                            600: '#9e7b51',
+                            700: '#7d5e38',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f7f2e8;
+        }
+        .recipe-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .recipe-card:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col justify-between">
+
+    <!-- Header Navigation -->
+    <header class="bg-brand-700 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-warm-100 text-brand-700 flex items-center justify-center text-xl font-bold shadow-inner">
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">NutriChef AI</h1>
+                    <p class="text-xs text-brand-100 opacity-90">20년 차 영양전문가 & 셰프의 맞춤 코칭</p>
+                </div>
+            </div>
+            <!-- API Setting Modal Trigger -->
+            <button onclick="toggleApiModal()" class="flex items-center space-x-2 bg-brand-600 hover:bg-brand-500 text-white text-xs px-3 py-2 rounded-lg transition border border-brand-500 shadow-sm">
+                <i class="fa-solid fa-key"></i>
+                <span class="hidden sm:inline">API 키 설정</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- Banner / Hero Section -->
+        <section class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-warm-200 mb-8 text-center md:text-left relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 opacity-10 text-brand-700 pointer-events-none">
+                <i class="fa-solid fa-carrot text-[200px]"></i>
+            </div>
+            <div class="max-w-2xl">
+                <span class="inline-block bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                    <i class="fa-solid fa-leaf mr-1"></i> 헬시 플래너 & 스마트 쿠킹
+                </span>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                    냉장고 속 재료로 완성하는<br><span class="text-brand-600">전문가 맞춤 건강 식단</span>
+                </h2>
+                <p class="text-gray-600 text-sm md:text-base leading-relaxed">
+                    건강 목적과 현재 가지고 계신 식재료를 알려주세요. 20년 노하우의 영양 흡수율 상승 팁과 손쉬운 맞춤형 레시피 3가지를 제안해 드립니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- Form Card Section -->
+        <section class="bg-white rounded-2xl p-6 md:p-8 shadow-md border border-warm-200 mb-10">
+            <form id="recipeForm" onsubmit="handleFormSubmit(event)">
+
+                <!-- 1. Health Goals Selection -->
+                <div class="mb-8">
+                    <label class="block text-gray-800 font-bold mb-2 text-base flex items-center">
+                        <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center mr-2">1</span>
+                        건강 관심 분야 선택 <span class="text-xs font-normal text-gray-500 ml-2">(복수 선택 가능)</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-3" id="healthGoalsContainer">
+                        <!-- Goal Tags -->
+                        <button type="button" onclick="toggleGoal(this, '다이어트/체중감량')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>🥗 다이어트 / 체중감량</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                        <button type="button" onclick="toggleGoal(this, '혈당/당뇨 관리')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>🩸 혈당 / 당뇨 관리</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                        <button type="button" onclick="toggleGoal(this, '혈압/심혈관')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>🫀 혈압 / 심혈관 건강</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                        <button type="button" onclick="toggleGoal(this, '피로회복/면역')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>⚡ 피로회복 / 면역 강화</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                        <button type="button" onclick="toggleGoal(this, '소화/장건강')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>🌿 소화 / 장건강 개선</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                        <button type="button" onclick="toggleGoal(this, '근육증량/단백질')" class="goal-btn border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 hover:border-brand-500 transition flex items-center justify-between bg-warm-50">
+                            <span>🏋️ 근육증량 / 고단백</span>
+                            <i class="fa-solid fa-check text-xs opacity-0 text-brand-600"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Ingredients Input -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="ingredientsInput" class="text-gray-800 font-bold text-base flex items-center">
+                            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center mr-2">2</span>
+                            집에 있는 식재료 입력
+                        </label>
+                        <span class="text-xs text-gray-500">쉼표(,)로 구분하여 작성</span>
+                    </div>
+                    <textarea id="ingredientsInput" rows="3" placeholder="예: 계란, 두부, 양배추, 대파, 양파, 닭가슴살, 버섯" class="w-full p-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm bg-warm-50/50"></textarea>
+                    
+                    <!-- Quick Preset Ingredients -->
+                    <div class="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>자주 쓰이는 예시:</span>
+                        <button type="button" onclick="addSampleIngredient('계란, 두부, 양배추')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition"># 기본 건강재료</button>
+                        <button type="button" onclick="addSampleIngredient('닭가슴살, 브로콜리, 고구마')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition"># 식단 관리용</button>
+                        <button type="button" onclick="addSampleIngredient('돼지고기, 대파, 양파, 버섯')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition"># 고기류 조합</button>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button type="submit" id="submitBtn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2 text-base">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>맞춤 레시피 & 영양 조언 받기</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Loading Spinner Container -->
+        <div id="loadingContainer" class="hidden my-12 text-center py-12 bg-white rounded-2xl shadow-sm border border-warm-200">
+            <div class="inline-block relative w-16 h-16 mb-4">
+                <div class="w-16 h-16 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-brand-600 text-lg">
+                    <i class="fa-solid fa-kitchen-set"></i>
+                </div>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-1">20년 차 수석 셰프 & 영양사가 식단을 구성 중입니다</h3>
+            <p class="text-sm text-gray-500">식재료의 영양 시너지와 맛의 조화를 계산하고 있습니다...</p>
+        </div>
+
+        <!-- Result Container -->
+        <div id="resultContainer" class="hidden space-y-8">
+            
+            <!-- 1-Minute Nutrition Coaching Banner -->
+            <div class="bg-gradient-to-r from-brand-700 to-brand-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+                <div class="flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-white/10 flex-shrink-0 flex items-center justify-center text-2xl text-warm-200">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="text-xs uppercase tracking-wider font-semibold bg-white/20 px-2.5 py-0.5 rounded-full text-warm-100">Expert Advice</span>
+                            <h3 class="text-lg font-bold">20년 차 전문가의 1분 건강 코칭</h3>
+                        </div>
+                        <p id="nutritionAdvice" class="text-sm leading-relaxed text-brand-50 mt-2 whitespace-pre-line"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipes Grid -->
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 mb-5 flex items-center">
+                    <i class="fa-solid fa-utensils text-brand-600 mr-2.5"></i>
+                    추천 맞춤 레시피 3선
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="recipesGrid">
+                    <!-- Recipes injected dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-warm-200 py-6 mt-12 text-center text-xs text-gray-500">
+        <div class="max-w-5xl mx-auto px-4">
+            <p class="mb-1">NutriChef AI - 20년 차 영양교육 전문가 & 수석 셰프의 지혜를 담은 건강 레시피 파트너</p>
+            <p class="text-gray-400">제공되는 건강 조언은 일반적인 영양 정보이며 의학적 진단을 대신할 수 없습니다.</p>
+        </div>
+    </footer>
+
+    <!-- API Key Modal -->
+    <div id="apiModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-warm-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center">
+                    <i class="fa-solid fa-key text-brand-600 mr-2"></i> API 키 설정
+                </h3>
+                <button onclick="toggleApiModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                기본 제공 모델(Gemini) 외에 사용자의 <strong>OpenAI API Key</strong>를 입력해 사용할 수 있습니다. 입력된 Key는 브라우저 내부(LocalStorage)에만 안전하게 보관됩니다.
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="providerSelect" class="block text-xs font-bold text-gray-700 mb-1">AI 제공자 선택</label>
+                    <select id="providerSelect" onchange="handleProviderChange()" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-brand-500">
+                        <option value="gemini">Gemini (기본 내장 Engine)</option>
+                        <option value="openai">OpenAI (사용자 Key 입력)</option>
+                    </select>
+                </div>
+
+                <div id="openaiKeyContainer" class="hidden">
+                    <label for="openaiKeyInput" class="block text-xs font-bold text-gray-700 mb-1">OpenAI API Key</label>
+                    <input type="password" id="openaiKeyInput" placeholder="sk-..." class="w-full p-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-brand-500">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-2">
+                <button onclick="toggleApiModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-100 transition">취소</button>
+                <button onclick="saveApiSettings()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-brand-600 text-white hover:bg-brand-700 transition">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Alert Box -->
+    <div id="alertBox" class="fixed bottom-5 right-5 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 hidden transition-all duration-300 transform translate-y-2 text-sm flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info text-brand-500" id="alertIcon"></i>
+        <span id="alertMessage"></span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Selected goals state
+        let selectedGoals = [];
+
+        // Toggle Health Goal Button State
+        function toggleGoal(element, goal) {
+            const checkIcon = element.querySelector('.fa-check');
+            
+            if (selectedGoals.includes(goal)) {
+                selectedGoals = selectedGoals.filter(g => g !== goal);
+                element.classList.remove('border-brand-500', 'bg-brand-50', 'text-brand-700');
+                element.classList.add('border-gray-200', 'bg-warm-50', 'text-gray-700');
+                checkIcon.classList.add('opacity-0');
+            } else {
+                selectedGoals.push(goal);
+                element.classList.remove('border-gray-200', 'bg-warm-50', 'text-gray-700');
+                element.classList.add('border-brand-500', 'bg-brand-50', 'text-brand-700');
+                checkIcon.classList.remove('opacity-0');
+            }
+        }
+
+        // Add Sample Ingredient
+        function addSampleIngredient(sampleText) {
+            const input = document.getElementById('ingredientsInput');
+            if (input.value.trim() === '') {
+                input.value = sampleText;
+            } else {
+                input.value += `, ${sampleText}`;
+            }
+        }
+
+        // Toggle Modal Display
+        function toggleApiModal() {
+            const modal = document.getElementById('apiModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Handle Provider Selector inside Modal
+        function handleProviderChange() {
+            const provider = document.getElementById('providerSelect').value;
+            const container = document.getElementById('openaiKeyContainer');
+            if (provider === 'openai') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Save Settings to LocalStorage
+        function saveApiSettings() {
+            const provider = document.getElementById('providerSelect').value;
+            const key = document.getElementById('openaiKeyInput').value.trim();
+
+            localStorage.setItem('nutrichef_provider', provider);
+            if (provider === 'openai') {
+                if (!key) {
+                    showAlert('OpenAI API Key를 입력해주세요.');
+                    return;
+                }
+                localStorage.setItem('nutrichef_openai_key', key);
+            }
+            
+            showAlert('설정이 성공적으로 저장되었습니다.');
+            toggleApiModal();
+        }
+
+        // Load Settings on Start
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedProvider = localStorage.getItem('nutrichef_provider') || 'gemini';
+            const savedKey = localStorage.getItem('nutrichef_openai_key') || '';
+
+            document.getElementById('providerSelect').value = savedProvider;
+            document.getElementById('openaiKeyInput').value = savedKey;
+            handleProviderChange();
+        });
+
+        // Toast Notification Function
+        function showAlert(msg) {
+            const alertBox = document.getElementById('alertBox');
+            const alertMessage = document.getElementById('alertMessage');
+            alertMessage.textContent = msg;
+            alertBox.classList.remove('hidden', 'translate-y-2');
+            
+            setTimeout(() => {
+                alertBox.classList.add('translate-y-2');
+                setTimeout(() => alertBox.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        // Form Submission Handler
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const ingredients = document.getElementById('ingredientsInput').value.trim();
+
+            if (selectedGoals.length === 0) {
+                showAlert('최소 한 개 이상의 건강 관심 분야를 선택해 주세요.');
+                return;
+            }
+
+            if (!ingredients) {
+                showAlert('보유하고 계신 식재료를 입력해 주세요.');
+                return;
+            }
+
+            // Show Loading Indicator
+            document.getElementById('loadingContainer').classList.remove('hidden');
+            document.getElementById('resultContainer').classList.add('hidden');
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                const responseData = await fetchAIResponse(selectedGoals, ingredients);
+                renderResults(responseData);
+                document.getElementById('resultContainer').classList.remove('hidden');
+                
+                // Scroll to result smoothly
+                document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Recipe generation error:', error);
+                showAlert('레시피 생성 중 오류가 발생했습니다. 키 설정을 확인하시거나 잠시 후 다시 시도해 주세요.');
+            } finally {
+                document.getElementById('loadingContainer').classList.add('hidden');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        // Fetch AI Response Handler
+        async function fetchAIResponse(goals, ingredients) {
+            const provider = localStorage.getItem('nutrichef_provider') || 'gemini';
+            
+            const systemPrompt = `당신은 20년 차 영양교육 전문가이자 20년 차 요리 경력을 가진 수석 셰프입니다.
+사용자의 건강 목적(${goals.join(', ')})과 현재 보유한 식재료(${ingredients})를 분석하여 전문적인 영양 코칭과 레시피 3가지를 제안하세요.
+
+반드시 지정된 JSON 형식으로만 응답해야 합니다. 마크다운 블록 코드(\`\`\`json) 없이 순수 JSON만 반환하세요.
+
+응답 JSON 구조:
+{
+  "nutritionAdvice": "20년 차 전문가 시각의 1분 건강 코칭 (섭취 순서, 영양 흡수율 높이는 방법 등 2~3문장)",
+  "recipes": [
+    {
+      "optionType": "Option 1: 초간단 10분 요리 (시간 절약형)",
+      "title": "요리명",
+      "cookingTime": "10분",
+      "difficulty": "쉬움",
+      "ingredients": "보유재료 및 기본양념 명시",
+      "steps": [
+        "1단계 설명",
+        "2단계 설명",
+        "3단계 설명"
+      ],
+      "expertTip": "영양학적 조리 팁 또는 풍미를 더하는 셰프의 팁"
+    },
+    {
+      "optionType": "Option 2: 영양 균형 요리 (영양 강화형)",
+      "title": "요리명",
+      "cookingTime": "20분",
+      "difficulty": "보통",
+      "ingredients": "보유재료 및 기본양념 명시",
+      "steps": [
+        "1단계 설명",
+        "2단계 설명",
+        "3단계 설명",
+        "4단계 설명"
+      ],
+      "expertTip": "영양학적 조리 팁 또는 풍미를 더하는 셰프의 팁"
+    },
+    {
+      "optionType": "Option 3: 이색 별미 요리 (맛·풍미 강화형)",
+      "title": "요리명",
+      "cookingTime": "25분",
+      "difficulty": "보통",
+      "ingredients": "보유재료 및 기본양념 명시",
+      "steps": [
+        "1단계 설명",
+        "2단계 설명",
+        "3단계 설명",
+        "4단계 설명"
+      ],
+      "expertTip": "영양학적 조리 팁 또는 풍미를 더하는 셰프의 팁"
+    }
+  ]
+}`;
+
+            const userPrompt = `[건강 관심사]: ${goals.join(', ')}\n[보유 식재료]: ${ingredients}`;
+
+            if (provider === 'openai') {
+                const openaiKey = localStorage.getItem('nutrichef_openai_key');
+                if (!openaiKey) {
+                    throw new Error('OpenAI API Key가 설정되지 않았습니다.');
+                }
+                return await callOpenAI(openaiKey, systemPrompt, userPrompt);
+            } else {
+                return await callGemini(systemPrompt, userPrompt);
+            }
+        }
+
+        // Gemini API Call (gemini-3-flash-preview)
+        async function callGemini(systemPrompt, userPrompt) {
+            const apiKey = ""; // Handled automatically by platform environment if empty
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gemini API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            return JSON.parse(textResponse);
+        }
+
+        // OpenAI API Call
+        async function callOpenAI(apiKey, systemPrompt, userPrompt) {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    response_format: { type: "json_object" }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`OpenAI API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const textResponse = result.choices?.[0]?.message?.content;
+            return JSON.parse(textResponse);
+        }
+
+        // Render Results to UI
+        function renderResults(data) {
+            // Render 1-Minute Advice
+            document.getElementById('nutritionAdvice').textContent = data.nutritionAdvice || '선택하신 재료는 영양소 조화가 우수합니다.';
+
+            // Render Recipes
+            const recipesGrid = document.getElementById('recipesGrid');
+            recipesGrid.innerHTML = '';
+
+            const optionIcons = [
+                'fa-stopwatch text-amber-500',
+                'fa-scale-balanced text-brand-600',
+                'fa-utensils text-rose-500'
+            ];
+
+            const optionBadgeStyles = [
+                'bg-amber-100 text-amber-800 border-amber-200',
+                'bg-brand-100 text-brand-800 border-brand-200',
+                'bg-rose-100 text-rose-800 border-rose-200'
+            ];
+
+            data.recipes.forEach((recipe, idx) => {
+                const card = document.createElement('div');
+                card.className = 'recipe-card bg-white rounded-2xl shadow-md border border-warm-200 overflow-hidden flex flex-col justify-between';
+
+                const stepsList = recipe.steps.map((step, i) => `
+                    <li class="flex items-start text-xs text-gray-600 leading-relaxed">
+                        <span class="w-4 h-4 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center text-[10px] font-bold mr-2 mt-0.5 flex-shrink-0">${i + 1}</span>
+                        <span>${step}</span>
+                    </li>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="p-5">
+                        <!-- Badge Header -->
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold px-2.5 py-1 rounded-lg border ${optionBadgeStyles[idx] || optionBadgeStyles[0]} flex items-center">
+                                <i class="fa-solid ${optionIcons[idx] || optionIcons[0]} mr-1.5"></i>
+                                ${recipe.optionType.split(':')[0]}
+                            </span>
+                            <div class="flex items-center space-x-2 text-xs text-gray-500 font-medium">
+                                <span><i class="fa-regular fa-clock text-gray-400 mr-1"></i>${recipe.cookingTime}</span>
+                                <span>•</span>
+                                <span>${recipe.difficulty}</span>
+                            </div>
+                        </div>
+
+                        <!-- Title -->
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">${recipe.title}</h4>
+
+                        <!-- Ingredients -->
+                        <div class="bg-warm-50/70 rounded-xl p-3 mb-4 border border-warm-100">
+                            <div class="text-[11px] font-bold text-warm-700 uppercase tracking-wider mb-1 flex items-center">
+                                <i class="fa-solid fa-basket-shopping mr-1.5"></i> 필요 재료
+                            </div>
+                            <p class="text-xs text-gray-700 leading-snug">${recipe.ingredients}</p>
+                        </div>
+
+                        <!-- Cooking Steps -->
+                        <div class="mb-4">
+                            <div class="text-xs font-bold text-gray-800 mb-2 flex items-center">
+                                <i class="fa-solid fa-fire-burner text-brand-600 mr-1.5"></i> 조리 과정
+                            </div>
+                            <ul class="space-y-2">
+                                ${stepsList}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Chef's Tip Footer -->
+                    <div class="bg-warm-100/60 p-3.5 border-t border-warm-200 mt-auto">
+                        <div class="text-[11px] font-bold text-brand-700 flex items-center mb-0.5">
+                            <i class="fa-solid fa-lightbulb text-amber-500 mr-1.5"></i> 셰프의 영양 Tip
+                        </div>
+                        <p class="text-xs text-gray-600 leading-relaxed italic">${recipe.expertTip}</p>
+                    </div>
+                `;
+
+                recipesGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
